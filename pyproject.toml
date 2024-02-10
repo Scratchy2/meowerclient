@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "meowerclient"
-version = "1.0.0"
+version = "1.1.1"
 authors = [
     { name="SpeedBee411" },
 ]
 description = "A Python client to view the 25 most recent Meower posts."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
