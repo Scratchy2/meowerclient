@@ -1,9 +1,9 @@
 from meowerclient import MeowerClient
-import json as j
+import json
 
 with open("token.json", "r+") as f:
     f.seek(0)
-    data = j.load(f)
+    data = json.load(f)
     f.close()
 
 client = MeowerClient()
