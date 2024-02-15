@@ -7,4 +7,4 @@ with open("token.json", "r+") as f:
     f.close()
 
 client = MeowerClient()
-client.RUNCLIENT("SpeedBee411", data["token"])
+client.RUNCLIENT(data["token"])
