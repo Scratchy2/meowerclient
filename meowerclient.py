@@ -4,12 +4,14 @@ class MeowerClient:
     def __init__(self) -> None:
         self.token = ""
         self.messages = []
+        self.fullmessages = []
         self.history = []
         self.old = []
         self.author = ""
         self.new = []
         self.window = ""
         self.p = ""
+        self.fullp = ""
         global layout
         layout = []
 
@@ -18,7 +20,6 @@ class MeowerClient:
         Please use the RUNCLIENT() function instead of this one.
         """
         self.token = token
-        self.messages = []
         self.history = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0:25]
 
     def _showHistory(self):
@@ -27,18 +28,24 @@ class MeowerClient:
         """
         for i in range(len(self.history)):
             self.old = self.history[24 - i]
-            self.p = self.old["p"]
+            self.fullp = self.old["p"]
             try:
                 if self.old["unfiltered_p"]:
-                    self.p = self.old["unfiltered_p"]
+                    self.fullp = self.old["unfiltered_p"]
             except:
                 pass
+            
+            self.p = re.search(r"(.+)((\n.+)+)?", self.fullp).group(1)
+            if self.p != self.fullp:
+                self.p += "..."
             
             self.author = self.old["u"]
             if self.author == "Discord":
                 self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
+                self.fullmessages.append(f'(bridged) {self.fullp}')
             else:
                 self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
+                self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
 
     def _createWin(self):
         """
@@ -58,7 +65,8 @@ class MeowerClient:
             ],
             [
                 sg.Button("Reply", button_color=("#FFF", "#000"), font=("Terminal", 14)),
-                sg.Button("Copy", button_color=("#FFF", "#000"), font=("Terminal", 14))
+                sg.Button("Copy", button_color=("#FFF", "#000"), font=("Terminal", 14)),
+                sg.Button("View Full", button_color=("#FFF", "#000"), font=("Terminal", 14))
             ]
         ]
         self.window = sg.Window(title="Meower Python Client", layout=layout, margins=(5, 10), location=(0, 0), background_color="#e48b26")
@@ -68,40 +76,60 @@ class MeowerClient:
         Please use the RUNCLIENT() function instead of this one.
         """
         def newmessages():
-            self.old = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
-            self.p = self.old["p"]
             try:
-                if self.old["unfiltered_p"]:
-                    self.p = self.old["unfiltered_p"]
-            except:
-                pass
-            
-            self.author = self.old["u"]
-            if self.author == "Discord":
-                self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.old["p"]}')
-            else:
-                self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.old["p"]}')
-            while True:
-                self.new = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
-                if self.new != self.old:
-                    self.old = self.new
+                self.old = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
+                self.fullp = self.old["p"]
+                try:
+                    if self.old["unfiltered_p"]:
+                        self.fullp = self.old["unfiltered_p"]
+                except:
+                    pass
+                finally:
                     self.author = self.old["u"]
-                    self.p = self.old["p"]
-                    try:
-                        if self.old["unfiltered_p"]:
-                            self.p = self.old["unfiltered_p"]
-                    except:
-                        pass
+
+                    self.p = re.search(r"(.+)((\n.+)+)?", self.fullp).group(1)
+                    if self.p != self.fullp:
+                        self.p += "..."
                     
                     if self.author == "Discord":
                         self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
+                        self.fullmessages.append(f'(bridged) {self.fullp}')
                     else:
                         self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
+                        self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
+                
+                while True:
+                    time.sleep(0)
+                    self.new = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
+                    if self.new != self.old:
+                        self.old = self.new
+                        self.author = self.old["u"]
+                        self.p = self.old["p"]
+                        try:
+                            if self.old["unfiltered_p"]:
+                                self.p = self.old["unfiltered_p"]
+                        except:
+                            pass
+                        finally:
+                            if self.author == "Discord":
+                                self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
+                                self.fullmessages.append(f'(bridged) {self.fullp}')
+                            else:
+                                self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
+                                self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
 
-                    self.window["history"].update(value="\n".join(self.messages[len(self.messages) - 25:]))
-        
-                time.sleep(0.01)
+                            self.window["history"].update(value="\n".join(self.messages[len(self.messages) - 25:]))
 
+                        time.sleep(0.01)
+            except:
+                print("thread completed")
+
+        def showfullmsg(idx):
+            p.alert(f"Full version of message #{idx}:\n{self.fullmessages[idx - 1]}")
+            global thread2
+            thread2 = None
+
+        global thread
         thread = threading.Thread(target=newmessages)
         thread.start()
 
@@ -129,13 +157,20 @@ class MeowerClient:
                     idx = int(p.prompt("Message number on the list to copy:"))
                     prev = values["message"]
                     self.window["message"].update(value=self.messages[idx - 1], select=True)
-                    p.hotkey("ctrl", "c", "backspace")
+                    p.hotkey("ctrl", "c", "backspace", interval=0.1)
                     self.window["message"].update(value=prev, select=True)
                     p.hotkey("right")
                 except:
                     print("error in input")
+            elif event == "View Full":
+                try:
+                    idx = int(p.prompt("Message number on the list to view in full:"))
+                    thread2 = threading.Thread(target=showfullmsg, args=[idx])
+                    thread2.start()
+                except:
+                    print("error in input")
             elif event == sg.WIN_CLOSED:
-                exit("program stopped")
+                exit("window closed")
             
             time.sleep(0.01)
     
@@ -143,8 +178,13 @@ class MeowerClient:
         """
         Function to run the client. This function will call all initialization functions for you.
         """
-        self.token = token
-        MeowerClient._initialize(self=self, token=self.token)
-        MeowerClient._showHistory(self=self)
-        MeowerClient._createWin(self=self)
-        MeowerClient._run(self=self)
+        try:
+            self.token = token
+            MeowerClient._initialize(self=self, token=self.token)
+            MeowerClient._showHistory(self=self)
+            MeowerClient._createWin(self=self)
+            MeowerClient._run(self=self)
+        except:
+            global thread
+            thread = None
+            exit("program completed")
