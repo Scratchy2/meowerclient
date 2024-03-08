@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "meowerclient"
-version = "1.4.0"
+version = "1.5"
 authors = [
     { name="SpeedBee411" },
 ]
-description = "A Python client to view the 25 most recent Meower posts, now with replying and no filter!"
+description = "A Python client to view the 25 most recent Meower posts, now with full message viewing at the user's discretion!"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
