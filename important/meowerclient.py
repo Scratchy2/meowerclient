@@ -22,30 +22,43 @@ class MeowerClient:
         self.token = token
         self.history = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0:25]
 
-    def _showHistory(self):
+    def _showHistory(self, count: int, usehistory: bool):
         """
         Please use the RUNCLIENT() function instead of this one.
         """
-        for i in range(len(self.history)):
-            self.old = self.history[24 - i]
+        for i in range(count):
+            if usehistory:
+                self.old = self.history[count - 1 - i]
+            else:
+                self.old = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
+            
             self.fullp = self.old["p"]
             try:
                 if self.old["unfiltered_p"]:
                     self.fullp = self.old["unfiltered_p"]
             except:
                 pass
+
+            self.p = re.search(r"(@.+?) \"(.+?)\" \([a-f0-9-]*\)\s((.+)?)", self.fullp)
             
-            self.p = re.search(r"(.+)((\n.+)+)?", self.fullp).group(1)
-            if self.p != self.fullp:
-                self.p += "..."
+            try:
+                if len(self.p.group(2)) > 35:
+                    self.p = f'{self.p.group(1)}: "{self.p.group(2)[:34]}..." {self.p.group(4)}'
+                else:
+                    self.p = f'{self.p.group(1)}: "{self.p.group(2)}" {self.p.group(4)}'
+            except:
+                self.p = re.search(r"(.+)((\n.+)?)", self.fullp).group(1)
+            
+                if self.p != self.fullp:
+                    self.p += "..."
             
             self.author = self.old["u"]
             if self.author == "Discord":
-                self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
-                self.fullmessages.append(f'(bridged) {self.fullp}')
+                self.messages.append(f'(#{len(self.messages) + 1}, discord    ) {self.p}')
+                self.fullmessages.append(f'(discord) {self.fullp}')
             else:
-                self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
-                self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
+                self.messages.append(f'(#{len(self.messages) + 1}, non-discord) {self.author}: {self.p}')
+                self.fullmessages.append(f'(non-discord) {self.author}: {self.fullp}')
 
     def _createWin(self):
         """
@@ -77,54 +90,47 @@ class MeowerClient:
         """
         def newmessages():
             try:
-                self.old = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
-                self.fullp = self.old["p"]
-                try:
-                    if self.old["unfiltered_p"]:
-                        self.fullp = self.old["unfiltered_p"]
-                except:
-                    pass
-                finally:
-                    self.author = self.old["u"]
-
-                    self.p = re.search(r"(.+)((\n.+)+)?", self.fullp).group(1)
-                    if self.p != self.fullp:
-                        self.p += "..."
-                    
-                    if self.author == "Discord":
-                        self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
-                        self.fullmessages.append(f'(bridged) {self.fullp}')
-                    else:
-                        self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
-                        self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
-                
                 while True:
                     time.sleep(0)
                     self.new = requests.get("https://api.meower.org/home?autoget&page=1").json()["autoget"][0]
                     if self.new != self.old:
                         self.old = self.new
                         self.author = self.old["u"]
-                        self.p = self.old["p"]
+                        self.fullp = self.old["p"]
                         try:
-                            if self.old["unfiltered_p"]:
-                                self.p = self.old["unfiltered_p"]
+                            self.fullp = self.old["unfiltered_p"]
                         except:
                             pass
+                        
+                        self.p = re.search(r"(@.+?) \"(.+?)\" \([a-f0-9-]*\)\s((.+)?)", self.fullp)
+            
+                        try:
+                            if len(self.p.group(2)) > 35:
+                                self.p = f'{self.p.group(1)}: "{self.p.group(2)[:34]}..." {self.p.group(4)}'
+                            else:
+                                self.p = f'{self.p.group(1)}: "{self.p.group(2)}" {self.p.group(4)}'
+                        except:
+                            self.p = re.search(r"(.+)((\n.+)?)", self.fullp).group(1)
+            
+                            if self.p != self.fullp:
+                                self.p += "..."
                         finally:
                             if self.author == "Discord":
-                                self.messages.append(f'(#{len(self.messages) + 1}, bridged) {self.p}')
-                                self.fullmessages.append(f'(bridged) {self.fullp}')
+                                self.messages.append(f'(#{len(self.messages) + 1}, discord    ) {self.p}')
+                                self.fullmessages.append(f'(discord) {self.fullp}')
                             else:
-                                self.messages.append(f'(#{len(self.messages) + 1}, meower ) {self.author}: {self.p}')
-                                self.fullmessages.append(f'(meower) {self.author}: {self.fullp}')
+                                self.messages.append(f'(#{len(self.messages) + 1}, non-discord) {self.author}: {self.p}')
+                                self.fullmessages.append(f'(non-discord) {self.author}: {self.fullp}')
 
                             self.window["history"].update(value="\n".join(self.messages[len(self.messages) - 25:]))
 
                         time.sleep(0.01)
             except:
                 print("thread completed")
+                exit("program completed")
 
-        def showfullmsg(idx):
+        def showfullmsg():
+            global idx
             p.alert(f"Full version of message #{idx}:\n{self.fullmessages[idx - 1]}")
             global thread2
             thread2 = None
@@ -141,9 +147,9 @@ class MeowerClient:
                 self.window["message"].update(value="", select=True)
             elif event == "Reply":
                 try:
+                    global idx
                     idx = int(p.prompt("Message number on the list to reply to:"))
-                    pattern = "\) (.+?: )(.+)"
-                    matches = re.search(pattern, self.messages[idx - 1])
+                    matches = re.search(r"\) (.+?: )(.+)", self.messages[idx - 1])
                     if len(matches.group(2)) > 35:
                         self.window["message"].update(value=f'@{matches.group(1)}"{matches.group(2)[:34]}..." {values["message"]}', select=True)
                     else:
@@ -165,7 +171,7 @@ class MeowerClient:
             elif event == "View Full":
                 try:
                     idx = int(p.prompt("Message number on the list to view in full:"))
-                    thread2 = threading.Thread(target=showfullmsg, args=[idx])
+                    thread2 = threading.Thread(target=showfullmsg)
                     thread2.start()
                 except:
                     print("error in input")
@@ -181,10 +187,8 @@ class MeowerClient:
         try:
             self.token = token
             MeowerClient._initialize(self=self, token=self.token)
-            MeowerClient._showHistory(self=self)
+            MeowerClient._showHistory(self=self, count=25, usehistory=True)
             MeowerClient._createWin(self=self)
             MeowerClient._run(self=self)
         except:
-            global thread
-            thread = None
             exit("program completed")
